@@ -17,3 +17,7 @@ app.post('/participants', (req, res) => {
 
     participants.push(name)
 })
+
+app.get('/participants', (req, res) => {
+    res.send(participants)
+})
