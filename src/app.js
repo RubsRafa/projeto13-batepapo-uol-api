@@ -32,9 +32,20 @@ app.post('/messages', (req, res) => {
 
 app.get('/messages', (req, res) => {
     const { limit } = req.query;
-    const { user } = req.header;
+    const { user } = req.headers;
     if (!limit) res.send(messages)
 
     const limitMessages = messages.slice((messages.length - limit), messages.length)
     res.send(limitMessages)
-})
+});
+
+app.post('/status', (req, res) => {
+    const { user } = req.headers;
+
+    if (!user) res.sendStatus(404)
+
+    const findUser = participants.find((p) => p.name === user);
+    if (!findUser) res.sendStatus(404)
+
+    res.sendStatus(200)
+});
