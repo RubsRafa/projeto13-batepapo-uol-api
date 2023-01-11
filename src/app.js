@@ -29,3 +29,12 @@ app.post('/messages', (req, res) => {
     messages.push(message);
     res.sendStatus(201);
 });
+
+app.get('/messages', (req, res) => {
+    const { limit } = req.query;
+    const { user } = req.header;
+    if (!limit) res.send(messages)
+
+    const limitMessages = messages.slice((messages.length - limit), messages.length)
+    res.send(limitMessages)
+})
