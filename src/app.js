@@ -1,5 +1,15 @@
 import express from 'express';
 import cors from 'cors';
+import { MongoClient } from 'mongodb'
+import dotenv from 'dotenv'
+dotenv.config(); 
+
+
+const mongoClient = new MongoClient(process.env.DATABASE_URL);
+
+await mongoClient.connect()
+const db = mongoClient.db()
+
 
 const app = express(); 
 app.use(cors());
@@ -9,8 +19,8 @@ const PORT = 5000;
 
 app.listen(PORT, () => console.log(`Servidor funcionando na porta ${PORT}`));
 
-const participants = []; //name, lastStatus, //salvo no Mongo > from, to, text, type, time; 
-const messages = []; //to, text, type; 
+const participants = []; //name, lastStatus, 
+const messages = []; //from, to, text, type, time; // reccebe to, text, type; 
 
 app.post('/participants', (req, res) => {
     const user = req.body; 
