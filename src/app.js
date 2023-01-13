@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { MongoClient } from 'mongodb'
+import { MongoClient, ObjectId } from 'mongodb'
+import dayjs from 'dayjs'
 import dotenv from 'dotenv'
 dotenv.config();
 
@@ -26,33 +27,47 @@ app.post('/participants', async (req, res) => {
     const { name } = req.body;
 
     try {
-        if (name === '' || typeof(name) !== 'string') return res.sendStatus(422)
-        
-        const userExist = await db.collection('participants').findOne({ name })
+        if (name === '' || typeof (name) !== 'string') return res.sendStatus(422)
+
+        const userExist = await db.collection('participants').findOne({ name }).toArray(); 
 
         if (userExist) return res.sendStatus(409);
 
-        await db.collection('participants').insertOne({ name })
+        await db.collection('participants').insertOne({ name, lastStatus: Date.now() })
         res.status(201).send('OK')
+
+    } catch (err) {
+        console.log('erro no post participants', err)
+        return res.sendStatus(500)
+    }
+});
+
+app.get('/participants', async (req, res) => {
+
+    try {
+        const participants = await db.collection('participants').find().toArray()
+
+        if (!participants) return res.sendStatus(404)
+
+        res.send(participants)
+    } catch (err) {
+        console.log('erro no get do participants', err)
+    }
+});
+
+app.post('/messages', async (req, res) => {
+    const { to, text, type } = req.body;
+    const { user } = req.headers;
+
+    try {
+        const userExist = await db.collection('participants').findOne({ name: user }).toArray(); 
+        await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`)})
 
     } catch (err) {
         console.log(err)
         return res.sendStatus(500)
     }
 
-});
-
-app.get('/participants', async (req, res) => {
-    const participants = await db.collection('participants').find().toArray()
-
-    if (!participants) return res.sendStatus(404)
-
-    res.send(participants)
-});
-
-app.post('/messages', (req, res) => {
-    const message = req.body;
-    messages.push(message);
     res.sendStatus(201);
 });
 
