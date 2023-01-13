@@ -29,7 +29,7 @@ app.post('/participants', async (req, res) => {
     try {
         if (name === '' || typeof (name) !== 'string') return res.sendStatus(422)
 
-        const userExist = await db.collection('participants').findOne({ name }).toArray(); 
+        const userExist = await db.collection('participants').findOne({ name }).toArray();
 
         if (userExist) return res.sendStatus(409);
 
@@ -60,24 +60,39 @@ app.post('/messages', async (req, res) => {
     const { user } = req.headers;
 
     try {
-        const userExist = await db.collection('participants').findOne({ name: user }).toArray(); 
-        await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`)})
+        const userExist = await db.collection('participants').findOne({ name: user })
+
+        if (typeof (to) !== 'string' || to === '') return res.status(422).send('primeiro')
+        if (typeof (text) !== 'string' || text === '') return res.status(422).send('segundo')
+        if (type.length === 0 || type !== "message" || type !== "private_message") return res.status(422).send('terceiro')
+        if (!userExist) return res.status(422).send('quarto')
+
+        await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) })
+        return res.sendStatus(201)
 
     } catch (err) {
-        console.log(err)
+        console.log('erro no messages do post', err)
         return res.sendStatus(500)
     }
 
-    res.sendStatus(201);
 });
 
-app.get('/messages', (req, res) => {
+app.get('/messages', async (req, res) => {
     const { limit } = req.query;
     const { user } = req.headers;
-    if (!limit) res.send(messages)
 
-    const limitMessages = messages.slice((messages.length - limit), messages.length)
-    res.send(limitMessages)
+    try {
+
+        const allMessages = await db.collection('messages').find({}).toArray();
+        if (!limit) res.send(allMessages)
+
+        const limitMessages = allMessages.slice((allMessages.length - limit), allMessages.length)
+        res.send(limitMessages)
+
+    } catch (err) {
+
+    }
+
 });
 
 app.post('/status', (req, res) => {
