@@ -34,6 +34,7 @@ app.post('/participants', async (req, res) => {
         if (userExist) return res.sendStatus(409);
 
         await db.collection('participants').insertOne({ name, lastStatus: Date.now() })
+        await db.collection('messages').insertOne({ from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs().format(`HH:mm:ss`) })
         res.sendStatus(201)
 
     } catch (err) {
@@ -67,7 +68,7 @@ app.post('/messages', async (req, res) => {
         if (typeof (type) !== 'string' || type === '') return res.status(422).send('terceiro')
         if (!userExist) return res.status(422).send('quarto')
 
-        await db.collection('messages').insertOne({ to, text, type, from: user, time: dayjs().format(`HH:mm:ss`) })
+        await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) })
         return res.sendStatus(201)
 
     } catch (err) {
@@ -83,7 +84,13 @@ app.get('/messages', async (req, res) => {
 
     try {
 
-        const allMessages = await db.collection('messages').find({ to: "Todos" }, { to: user }).toArray();
+        const allMessages = await db.collection('messages').find().toArray();
+
+        allMessages.filter((m) => {
+            if (m.to === "Todos" || m.to === user || m.from === user || m.type === "message" || m.type === "private_message") {
+                return m;
+            }
+        })
 
         if (!limit) return res.send(allMessages)
         if (Number(limit) < 1) return res.sendStatus(422)
@@ -103,7 +110,7 @@ app.post('/status', async (req, res) => {
     try {
 
         const userExist = await db.collection('participants').findOne({ name: user }).toArray();
-        
+
         if (!userExist) return res.sendStatus(404)
 
         await db.collection('participants').insertOne({ name: user, lastStatus: Date.now() })
@@ -114,3 +121,25 @@ app.post('/status', async (req, res) => {
         console.log('erro no post do status', err)
     }
 });
+
+setInterval(async () => {
+
+    try {
+        const findUsers = await db.collection('participants').find({}).toArray();
+
+        const newParticipants = findUsers.filter((u) => {
+            if ((Date.now() - u.lastStatus) > 10000) {
+                db.collection('participants').deleteOne({ _id: ObjectId(u._id) })
+                db.collection('message').insertOne({from: u.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`)})
+            }
+        })
+
+        console.log('removendo usuarios')
+        return newParticipants
+
+    } catch (err) {
+        console.log(err)
+    }
+
+}, 15000);
+
