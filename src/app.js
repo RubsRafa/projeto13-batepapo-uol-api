@@ -34,7 +34,7 @@ app.post('/participants', async (req, res) => {
         if (userExist) return res.sendStatus(409);
 
         await db.collection('participants').insertOne({ name, lastStatus: Date.now() })
-        res.status(201).send('OK')
+        res.sendStatus(201)
 
     } catch (err) {
         console.log('erro no post participants', err)
@@ -64,10 +64,10 @@ app.post('/messages', async (req, res) => {
 
         if (typeof (to) !== 'string' || to === '') return res.status(422).send('primeiro')
         if (typeof (text) !== 'string' || text === '') return res.status(422).send('segundo')
-        //if (type.length === 0 || type !== "message" || type !== "private_message") return res.status(422).send('terceiro')
+        if (typeof (type) !== 'string' || type === '') return res.status(422).send('terceiro')
         if (!userExist) return res.status(422).send('quarto')
 
-        await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) })
+        await db.collection('messages').insertOne({ to, text, type, from: user, time: dayjs().format(`HH:mm:ss`) })
         return res.sendStatus(201)
 
     } catch (err) {
@@ -83,25 +83,34 @@ app.get('/messages', async (req, res) => {
 
     try {
 
-        const allMessages = await db.collection('messages').find({}).toArray();
-        if (!limit) res.send(allMessages)
+        const allMessages = await db.collection('messages').find({ to: "Todos" }, { to: user }).toArray();
 
-        const limitMessages = allMessages.slice((allMessages.length - limit), allMessages.length)
-        res.send(limitMessages)
+        if (!limit) return res.send(allMessages)
+        if (Number(limit) < 1) return res.sendStatus(422)
+
+        const limitMessages = allMessages.slice((allMessages.length - Number(limit)), allMessages.length)
+        return res.send(limitMessages)
 
     } catch (err) {
-
+        console.log('erro no get do messages', err)
     }
 
 });
 
-app.post('/status', (req, res) => {
+app.post('/status', async (req, res) => {
     const { user } = req.headers;
 
-    if (!user) res.sendStatus(404)
+    try {
 
-    const findUser = participants.find((p) => p.name === user);
-    if (!findUser) res.sendStatus(404)
+        const userExist = await db.collection('participants').findOne({ name: user }).toArray();
+        
+        if (!userExist) return res.sendStatus(404)
 
-    res.sendStatus(200)
+        await db.collection('participants').insertOne({ name: user, lastStatus: Date.now() })
+
+        return res.sendStatus(200)
+
+    } catch (err) {
+        console.log('erro no post do status', err)
+    }
 });
