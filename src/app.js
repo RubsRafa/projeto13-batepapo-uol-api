@@ -29,7 +29,7 @@ app.post('/participants', async (req, res) => {
     try {
         if (name === '' || typeof (name) !== 'string') return res.sendStatus(422)
 
-        const userExist = await db.collection('participants').findOne({ name }).toArray();
+        const userExist = await db.collection('participants').findOne({ name });
 
         if (userExist) return res.sendStatus(409);
 
@@ -64,7 +64,7 @@ app.post('/messages', async (req, res) => {
 
         if (typeof (to) !== 'string' || to === '') return res.status(422).send('primeiro')
         if (typeof (text) !== 'string' || text === '') return res.status(422).send('segundo')
-        if (type.length === 0 || type !== "message" || type !== "private_message") return res.status(422).send('terceiro')
+        //if (type.length === 0 || type !== "message" || type !== "private_message") return res.status(422).send('terceiro')
         if (!userExist) return res.status(422).send('quarto')
 
         await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) })
