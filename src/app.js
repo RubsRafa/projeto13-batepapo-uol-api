@@ -29,7 +29,6 @@ app.post('/participants', async (req, res) => {
     const validation = nameSchema.validate({ name }, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map((d) => d.message);
-        console.log(errors)
         return res.status(422).send(errors)
     }
 
@@ -100,13 +99,17 @@ app.get('/messages', async (req, res) => {
         const allMessages = await db.collection('messages').find().toArray();
 
         const filterMessages = allMessages.filter((m) => {
+            if (m.type !== 'private_message') {
+                return m; 
+            }    
             if (m.to === "Todos" || m.to === user || m.from === user) {
                 return m;
             }
+                
         })
 
         if (!limit) return res.send(filterMessages)
-        if (typeof(Number(limit)) !== 'number' || Number(limit) < 1) return res.sendStatus(422)
+        if (typeof (Number(limit)) !== 'number' || Number(limit) < 1) return res.sendStatus(422)
 
 
         const limitMessages = filterMessages.slice((filterMessages.length - Number(limit)), filterMessages.length)
@@ -122,7 +125,6 @@ app.post('/status', async (req, res) => {
     const { user } = req.headers;
 
     try {
-
         let id;
         const userExist = await db.collection('participants').findOne({ name: user }).toArray()
             .then((item) => id = item._id)
@@ -140,11 +142,11 @@ app.post('/status', async (req, res) => {
 setInterval(async () => {
 
     try {
-        const findUsers = await db.collection('participants').find().toArray();
-        if (!findUsers || findUsers.length === 0) return;
+        const findUsers = await db.collection('participants').find()
+        if (!findUsers || findUsers.length === 0) return; 
 
         let user;
-        let id; 
+        let id;
         findUsers.filter((u) => {
             if ((Date.now() - u.lastStatus) > 10000) {
                 user = u.name;
@@ -155,36 +157,35 @@ setInterval(async () => {
 
         await db.collection('messages').insertOne({ from: user, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`) })
         await db.collection('participants').deleteOne({ _id: ObjectId(id) })
-        
+
     } catch (err) {
-        return err
+        console.log(err)
     }
 
 }, 15000);
 
 app.delete('/messages/:ID', async (req, res) => {
-    const { user } = req.headers; 
-    const { ID } = req.params; 
+    const { user } = req.headers;
+    const { ID } = req.params;
 
     try {
         const messageExist = await db.collection('messages').findOne({ _id: ObjectId(ID) })
         if (!messageExist) return res.sendStatus(404)
-        console.log(messageExist)
 
-        if(messageExist.from !== user) return res.sendStatus(401)
+        if (messageExist.from !== user) return res.sendStatus(401)
 
         await db.collection('messages').deleteOne({ _id: ObjectId(ID) })
         return res.sendStatus(200)
 
-    } catch(err) {
+    } catch (err) {
         return res.status(500).send(err)
     }
 })
 
 app.put('/messages/:ID', async (req, res) => {
-    const { to, text, type } = req.body; 
-    const { user } = req.headers; 
-    const { ID } = req.params; 
+    const { to, text, type } = req.body;
+    const { user } = req.headers;
+    const { ID } = req.params;
 
     try {
         const userExist = await db.collection('participants').findOne({ name: user })
@@ -195,7 +196,7 @@ app.put('/messages/:ID', async (req, res) => {
             text: joi.string().required(),
             type: joi.string().valid('message', 'private_message').required()
         })
-        const validation = messageSchema.validate({ to, text, type})
+        const validation = messageSchema.validate({ to, text, type })
         if (validation.error) {
             const errors = validation.error.details.map((e) => e.message)
             return res.status(422).send(errors)
@@ -205,10 +206,10 @@ app.put('/messages/:ID', async (req, res) => {
         if (!messageExist) return res.sendStatus(404)
         if (messageExist.from !== user) return res.sendStatus(401)
 
-        await db.collection('messages').updateOne({ _id: ObjectId(ID) }, { $set: { from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) }})
+        await db.collection('messages').updateOne({ _id: ObjectId(ID) }, { $set: { from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) } })
         return res.sendStatus(200)
-        
-    } catch(err) {
+
+    } catch (err) {
         return res.status(500).send(err)
     }
 })
