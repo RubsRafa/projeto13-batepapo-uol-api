@@ -107,11 +107,11 @@ app.get('/messages', async (req, res) => {
                 
         })
 
-        if (!limit) return res.send(filterMessages)
+        if (!limit) return res.status(200).send(filterMessages)
         if (typeof (Number(limit)) !== 'number' || Number(limit) <= 0) return res.sendStatus(422)
 
-
-        const limitMessages = filterMessages.slice((filterMessages.length - Number(limit)), filterMessages.length)
+        const limitMessages = filterMessages.reverse().slice((0, limit))
+        // const limitMessages = filterMessages.slice((filterMessages.length - Number(limit)), filterMessages.length)
         return res.status(200).send(limitMessages)
 
     } catch (err) {
