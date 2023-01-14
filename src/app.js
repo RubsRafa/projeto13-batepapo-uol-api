@@ -55,9 +55,10 @@ app.get('/participants', async (req, res) => {
 
         if (!participants) return res.sendStatus(404)
 
-        res.send(participants)
+        return res.send(participants)
     } catch (err) {
         console.log('erro no get do participants', err)
+        return res.sendStatus(500)
     }
 });
 
@@ -67,11 +68,18 @@ app.post('/messages', async (req, res) => {
 
     try {
         const userExist = await db.collection('participants').findOne({ name: user })
+        if (!userExist) return res.sendStatus(422)
 
-        if (typeof (to) !== 'string' || to === '') return res.status(422).send('primeiro')
-        if (typeof (text) !== 'string' || text === '') return res.status(422).send('segundo')
-        if (typeof (type) !== 'string' || type === '') return res.status(422).send('terceiro')
-        if (!userExist) return res.status(422).send('quarto')
+        const messageSchema = joi.object({
+            to: joi.string().required(),
+            text: joi.string().required(),
+            type: joi.string().valid('message', 'private_message').required()
+        })
+        const validation = messageSchema.validate({ to, text, type })
+        if (validation.error) {
+            const errors = validation.error.details.map((d) => d.message);
+            return res.status(422).send(errors)
+        }
 
         await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) })
         return res.sendStatus(201)
@@ -104,6 +112,7 @@ app.get('/messages', async (req, res) => {
         return res.send(limitMessages)
 
     } catch (err) {
+        return res.status(500).send(err)
         console.log('erro no get do messages', err)
     }
 
@@ -114,16 +123,17 @@ app.post('/status', async (req, res) => {
 
     try {
 
-        const userExist = await db.collection('participants').findOne({ name: user }).toArray();
-
+        let id; 
+        const userExist = await db.collection('participants').findOne({ name: user })
+        .then((item) => id = item._id)
         if (!userExist) return res.sendStatus(404)
 
-        await db.collection('participants').insertOne({ name: user, lastStatus: Date.now() })
+        await db.collection('participants').updateOne({ _id: ObjectId(id)}, { $set: { lastStatus: Date.now() } })
 
         return res.sendStatus(200)
 
     } catch (err) {
-        console.log('erro no post do status', err)
+        return res.status(500).send(err)
     }
 });
 
