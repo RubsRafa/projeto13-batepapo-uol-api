@@ -141,7 +141,7 @@ setInterval(async () => {
 
     try {
         const findUsers = await db.collection('participants').find().toArray();
-        if (!findUsers) return res.sendStatus(404)
+        if (!findUsers || findUsers.length === 0) return;
 
         let user;
         let id; 
@@ -151,11 +151,13 @@ setInterval(async () => {
                 id = u._id;
             }
         })
+        if (user === undefined) return;
+
         await db.collection('messages').insertOne({ from: user, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`) })
         await db.collection('participants').deleteOne({ _id: ObjectId(id) })
-        console.log(findUsers)
+        
     } catch (err) {
-        return res.status(500).send(err)
+        return err
     }
 
 }, 15000);
@@ -167,10 +169,11 @@ app.delete('/messages/:ID', async (req, res) => {
     try {
         const messageExist = await db.collection('messages').findOne({ _id: ObjectId(ID) })
         if (!messageExist) return res.sendStatus(404)
+        console.log(messageExist)
 
-        if(messageExist.name !== user) return res.sendStatus(401)
+        if(messageExist.from !== user) return res.sendStatus(401)
 
-        db.collection('messages').deleteOne({ _id: ObjectId(ID) })
+        await db.collection('messages').deleteOne({ _id: ObjectId(ID) })
 
     } catch(err) {
         return res.status(500).send(err)
