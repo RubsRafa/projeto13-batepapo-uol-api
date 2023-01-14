@@ -106,7 +106,7 @@ app.get('/messages', async (req, res) => {
         })
 
         if (!limit) return res.send(filterMessages)
-        if (Number(limit) < 1) return res.sendStatus(422)
+        if (typeof(Number(limit)) !== 'number' || Number(limit) < 1) return res.sendStatus(422)
 
         const limitMessages = filterMessages.slice((filterMessages.length - Number(limit)), filterMessages.length)
         return res.send(limitMessages)
@@ -141,7 +141,6 @@ setInterval(async () => {
 
     try {
         const findUsers = await db.collection('participants').find().toArray();
-        console.log(findUsers)
 
         let user;
         let id; 
@@ -162,3 +161,19 @@ setInterval(async () => {
 
 }, 15000);
 
+app.delete('/messages/:ID', async (req, res) => {
+    const { user } = req.headers; 
+    const { ID } = req.params; 
+
+    try {
+        const messageExist = await db.collection('messages').findOne({ _id: ObjectId(ID) })
+        if (!messageExist) return res.sendStatus(404)
+
+        if(messageExist.name !== user) return res.sendStatus(401)
+
+        db.collection('messages').deleteOne({ _id: ObjectId(ID) })
+
+    } catch(err) {
+        return res.status(500).send(err)
+    }
+})
