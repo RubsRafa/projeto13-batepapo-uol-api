@@ -42,7 +42,6 @@ app.post('/participants', async (req, res) => {
         res.sendStatus(201)
 
     } catch (err) {
-        console.log('erro no post participants', err)
         return res.sendStatus(500)
     }
 });
@@ -123,10 +122,10 @@ app.get('/messages', async (req, res) => {
 
 app.post('/status', async (req, res) => {
     const { user } = req.headers;
-
+    let id;
+    
     try {
-        let id;
-        const userExist = await db.collection('participants').findOne({ name: user }).toArray()
+        const userExist = await db.collection('participants').findOne({ name: user })
             .then((item) => id = item._id)
         if (!userExist) return res.sendStatus(404)
 
@@ -142,12 +141,12 @@ app.post('/status', async (req, res) => {
 setInterval(async () => {
 
     try {
-        const findUsers = await db.collection('participants').find()
+        const findUsers = await db.collection('participants').find().toArray()
         if (!findUsers || findUsers.length === 0) return; 
 
         let user;
         let id;
-        findUsers.filter((u) => {
+        findUsers.find((u) => {
             if ((Date.now() - u.lastStatus) > 10000) {
                 user = u.name;
                 id = u._id;
