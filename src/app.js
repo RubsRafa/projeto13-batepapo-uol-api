@@ -81,7 +81,7 @@ app.post('/messages', async (req, res) => {
             return res.status(422).send(errors)
         }
 
-        await db.collection('messages').insertOne({ from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) })
+        await db.collection('messages').insertOne({ to, text, type, from: user, time: dayjs().format(`HH:mm:ss`) })
         return res.sendStatus(201)
 
     } catch (err) {
@@ -108,12 +108,12 @@ app.get('/messages', async (req, res) => {
         if (!limit) return res.send(filterMessages)
         if (typeof(Number(limit)) !== 'number' || Number(limit) < 1) return res.sendStatus(422)
 
+
         const limitMessages = filterMessages.slice((filterMessages.length - Number(limit)), filterMessages.length)
         return res.send(limitMessages)
 
     } catch (err) {
         return res.status(500).send(err)
-        console.log('erro no get do messages', err)
     }
 
 });
@@ -124,7 +124,7 @@ app.post('/status', async (req, res) => {
     try {
 
         let id;
-        const userExist = await db.collection('participants').findOne({ name: user })
+        const userExist = await db.collection('participants').findOne({ name: user }).toArray()
             .then((item) => id = item._id)
         if (!userExist) return res.sendStatus(404)
 
@@ -133,7 +133,7 @@ app.post('/status', async (req, res) => {
         return res.sendStatus(200)
 
     } catch (err) {
-        return res.status(500).send(err)
+        return res.status(404).send(err)
     }
 });
 
@@ -174,6 +174,7 @@ app.delete('/messages/:ID', async (req, res) => {
         if(messageExist.from !== user) return res.sendStatus(401)
 
         await db.collection('messages').deleteOne({ _id: ObjectId(ID) })
+        return res.sendStatus(200)
 
     } catch(err) {
         return res.status(500).send(err)
@@ -205,7 +206,8 @@ app.put('/messages/:ID', async (req, res) => {
         if (messageExist.from !== user) return res.sendStatus(401)
 
         await db.collection('messages').updateOne({ _id: ObjectId(ID) }, { $set: { from: user, to, text, type, time: dayjs().format(`HH:mm:ss`) }})
-
+        return res.sendStatus(200)
+        
     } catch(err) {
         return res.status(500).send(err)
     }
