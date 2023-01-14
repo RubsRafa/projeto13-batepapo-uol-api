@@ -108,11 +108,11 @@ app.get('/messages', async (req, res) => {
         })
 
         if (!limit) return res.send(filterMessages)
-        if (typeof (Number(limit)) !== 'number' || Number(limit) < 1) return res.sendStatus(422)
+        if (typeof (Number(limit)) !== 'number' || Number(limit) <= 0) return res.sendStatus(422)
 
 
         const limitMessages = filterMessages.slice((filterMessages.length - Number(limit)), filterMessages.length)
-        return res.send(limitMessages)
+        return res.status(200).send(limitMessages)
 
     } catch (err) {
         return res.status(500).send(err)
@@ -123,7 +123,7 @@ app.get('/messages', async (req, res) => {
 app.post('/status', async (req, res) => {
     const { user } = req.headers;
     let id;
-    
+
     try {
         const userExist = await db.collection('participants').findOne({ name: user })
             .then((item) => id = item._id)
