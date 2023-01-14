@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { MongoClient, ObjectId } from 'mongodb'
 import dayjs from 'dayjs'
+import joi from 'joi'
 import dotenv from 'dotenv'
 dotenv.config();
 
@@ -20,8 +21,6 @@ const PORT = 5000;
 
 app.listen(PORT, () => console.log(`Servidor funcionando na porta ${PORT}`));
 
-//participants = name, lastStatus, 
-//messages = from, to, text, type, time; // reccebe to, text, type; 
 
 app.post('/participants', async (req, res) => {
     const { name } = req.body;
@@ -87,7 +86,7 @@ app.get('/messages', async (req, res) => {
         const allMessages = await db.collection('messages').find().toArray();
 
         allMessages.filter((m) => {
-            if (m.to === "Todos" || m.to === user || m.from === user || m.type === "message" || m.type === "private_message") {
+            if (m.to === "Todos" || m.to === user || m.from === user) {
                 return m;
             }
         })
@@ -129,8 +128,8 @@ setInterval(async () => {
 
         const newParticipants = findUsers.filter((u) => {
             if ((Date.now() - u.lastStatus) > 10000) {
-                db.collection('participants').deleteOne({ _id: ObjectId(u._id) })
                 db.collection('message').insertOne({from: u.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`)})
+                db.collection('participants').deleteOne({ _id: ObjectId(u._id) })
             }
         })
 
