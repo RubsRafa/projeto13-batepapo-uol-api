@@ -25,11 +25,17 @@ app.listen(PORT, () => console.log(`Servidor funcionando na porta ${PORT}`));
 app.post('/participants', async (req, res) => {
     const { name } = req.body;
 
+    const nameSchema = joi.object({ name: joi.string().required() });
+    const validation = nameSchema.validate({ name }, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map((d) => d.message);
+        console.log(errors)
+        return res.status(422).send(errors)
+    }
+
     try {
-        if (name === '' || typeof (name) !== 'string') return res.sendStatus(422)
 
         const userExist = await db.collection('participants').findOne({ name });
-
         if (userExist) return res.sendStatus(409);
 
         await db.collection('participants').insertOne({ name, lastStatus: Date.now() })
@@ -128,7 +134,7 @@ setInterval(async () => {
 
         const newParticipants = findUsers.filter((u) => {
             if ((Date.now() - u.lastStatus) > 10000) {
-                db.collection('message').insertOne({from: u.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`)})
+                db.collection('message').insertOne({ from: u.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`) })
                 db.collection('participants').deleteOne({ _id: ObjectId(u._id) })
             }
         })
