@@ -99,16 +99,16 @@ app.get('/messages', async (req, res) => {
 
         const allMessages = await db.collection('messages').find().toArray();
 
-        allMessages.filter((m) => {
+        const filterMessages = allMessages.filter((m) => {
             if (m.to === "Todos" || m.to === user || m.from === user) {
                 return m;
             }
         })
 
-        if (!limit) return res.send(allMessages)
+        if (!limit) return res.send(filterMessages)
         if (Number(limit) < 1) return res.sendStatus(422)
 
-        const limitMessages = allMessages.slice((allMessages.length - Number(limit)), allMessages.length)
+        const limitMessages = filterMessages.slice((filterMessages.length - Number(limit)), filterMessages.length)
         return res.send(limitMessages)
 
     } catch (err) {
@@ -123,12 +123,12 @@ app.post('/status', async (req, res) => {
 
     try {
 
-        let id; 
+        let id;
         const userExist = await db.collection('participants').findOne({ name: user })
-        .then((item) => id = item._id)
+            .then((item) => id = item._id)
         if (!userExist) return res.sendStatus(404)
 
-        await db.collection('participants').updateOne({ _id: ObjectId(id)}, { $set: { lastStatus: Date.now() } })
+        await db.collection('participants').updateOne({ _id: ObjectId(id) }, { $set: { lastStatus: Date.now() } })
 
         return res.sendStatus(200)
 
@@ -140,20 +140,24 @@ app.post('/status', async (req, res) => {
 setInterval(async () => {
 
     try {
-        const findUsers = await db.collection('participants').find({}).toArray();
+        const findUsers = await db.collection('participants').find().toArray();
+        console.log(findUsers)
 
+        let user;
+        let id; 
         const newParticipants = findUsers.filter((u) => {
             if ((Date.now() - u.lastStatus) > 10000) {
-                db.collection('message').insertOne({ from: u.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`) })
-                db.collection('participants').deleteOne({ _id: ObjectId(u._id) })
+                user = u.name;
+                id = u._id;
             }
         })
+        db.collection('messages').insertOne({ from: user, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format(`HH:mm:ss`) })
+        db.collection('participants').deleteOne({ _id: ObjectId(id) })
 
-        console.log('removendo usuarios')
         return newParticipants
 
     } catch (err) {
-        console.log(err)
+        return res.status(500).send(err)
     }
 
 }, 15000);
